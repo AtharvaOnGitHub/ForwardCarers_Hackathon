@@ -24,6 +24,36 @@ Unpaid carers are not a homogeneous group. This project uses clustering analysis
 - **GMM analysis**: Gaussian Mixture Models with BIC/AIC model selection and soft membership entropy analysis
 - **Profiling & visualisation**: Cluster profiles, cross-tabulation, and all report figures
 
+### `src/03_supervised_analysis.ipynb`
+
+#### Phase 3A: Binary Outcome Prediction
+
+- **Target engineering:** Binarises 9 Likert-scored domains — Low (1–2) vs High (4–5), score 3 dropped as ambiguous
+- **Intervention extraction:** Rule-based keyword matching on free-text `summary_actions` to extract 10 binary intervention flags (CERS referral, benefits advice, wellbeing payment, respite, etc.)
+- **Model:** HistGradientBoostingClassifier with regularisation (max_depth=3, L2=1.0, min_samples_leaf=50, early stopping)
+- **Evaluation:** 5-fold stratified CV, threshold tuning on train folds only. ROC–AUC 0.64–0.80 across domains. Strongest: Financial Situation (0.80), Caring Commitments (0.78), Work/Education (0.74)
+- **Permutation importance:** Model-agnostic, computed on held-out folds (10 repeats). Top drivers: working status, caring hours, carer age, condition complexity
+- **Category-level effects:** Marginal effects on P(High) per categorical feature level, filtered to n ≥ 50
+- **Outputs:** `binary_prediction_summary.csv`, `binary_perm_importance_<domain>.csv`, `category_effects_<domain>.csv`, Figure 1 (performance overview), Figure 2 (top predictors), per-domain ROC/PR/confusion matrix plots
+
+#### Phase 3B: Intervention Impact Modelling
+
+- **Data:** 2,380 carers with 6-month review. Improvement target: review − baseline ≥ 1
+- **Model:** Logistic Regression (balanced class weights) — chosen for interpretability over gradient boosting
+- **Marginal effects:** For each intervention × domain, toggles intervention ON vs OFF across reference population. Reports Δ P(improved) adjusted for baseline features and score
+- **Caveat:** Adjusted associations, not causal. Interventions were not randomly assigned. Results are a prioritisation tool, not a prescription
+- **Key findings:** Wellbeing payments positive across multiple domains. CERS referrals linked to safety improvement. Benefits advice linked to financial improvement. No actions flag linked to lower improvement
+- **Outputs:** `improvement_model_summary.csv`, `improve_importance_<domain>.csv`, `improve_interv_importance_<domain>.csv`, Figure 3 (intervention effect heatmap with prevalence)
+
+### `src/04_clustering_analysis.ipynb`
+•⁠  ⁠*Inputs:* ⁠ clustering_kmeans1.csv ⁠ (output of ⁠ 02_clustering_analysis.ipynb ⁠), ⁠ Data_Review_Cleaned.csv ⁠, and an interventions dataframe with columns ⁠ lookup ⁠ (carer ID) and ⁠ intervention_category ⁠
+•⁠  ⁠Links initial assessments to follow-up review data (~2,000 of 11,800 carers matched by ID)
+•⁠  ⁠Computes completion rates by situation cluster and estimates the opportunity gap: how many additional completions each cluster would yield if it matched the best-performing group's rate
+•⁠  ⁠Calculates domain-level change scores across nine wellbeing areas (review − initial; negative = improvement)
+•⁠  ⁠Computes Cohen's d effect sizes and paired t-tests for each cluster × domain combination, categorised as small / moderate / strong
+•⁠  ⁠Merges intervention records and produces two intervention heatmaps: score change by intervention type × domain, and overall score change by intervention type × situation cluster
+•⁠  ⁠Outputs five figures: completion diagnostic, improvement rate by cluster (95% CIs), effect size heatmap, intervention-domain heatmap, and intervention-cluster heatmap
+
 ## Key Findings
 
 | Situation Type | % | Description |
